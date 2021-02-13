@@ -16,38 +16,15 @@
 //                                                                           //
 //======---------------------------------------------------------------======//
 
-#ifndef ZINC_UTIL_OPTIONS_PARSER
-#define ZINC_UTIL_OPTIONS_PARSER
+#ifndef ZINC_DATA_DETAIL_MAP_TRAITS
+#define ZINC_DATA_DETAIL_MAP_TRAITS
 
-#include "zinc/types/concepts.h"
-#include "zinc/util/options/args.h"
-#include <cstddef>
-#include <optional>
-#include <string>
-#include <type_traits>
+#include "zinc/data/detail/set_traits.h"
+#include "zinc/data/detail/slot_traits.h"
 
-namespace zinc
+namespace zinc::detail
 {
-    namespace detail
-    {
-        //
-    } // namespace detail
-
-    class OptParser
-    {
-    public:
-        OptParser() = default;
-
-        template <ArgumentType T> OptParser& add_arg(Arg<T> argument)
-        {
-            (void)argument;
-
-            return *this;
-        }
-
-    private:
-        std::optional<std::string> help_message_;
-    };
-} // namespace zinc
+    //
+}
 
 #endif

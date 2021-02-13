@@ -24,6 +24,8 @@
 #include "zinc/types/concepts.h"
 #include "zinc/types/customization.h"
 #include "zinc/types/functors.h"
+#include "zinc/types/iterators.h"
+#include "zinc/types/pointers.h"
 #include "zinc/types/strings.h"
 
 #endif

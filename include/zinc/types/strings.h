@@ -68,6 +68,31 @@ namespace zinc
         { Traits::not_eof() } noexcept -> std::same_as<typename Traits::int_type>;
     });
     // clang-format on
+
+    namespace detail
+    {
+        template <typename T> struct IsStringSpecialization : std::false_type
+        {};
+
+        template <Charlike CharT> struct IsStringSpecialization<std::basic_string<CharT>> : std::true_type
+        {};
+
+        template <typename T> struct IsStringViewSpecialization : std::false_type
+        {};
+
+        template <Charlike CharT> struct IsStringViewSpecialization<std::basic_string_view<CharT>> : std::true_type
+        {};
+    } // namespace detail
+
+    /// Checks if a type is some specialization of `std::basic_string` with any `CharT`
+    template <typename T> concept StringSpecialization = detail::IsStringSpecialization<T>::value;
+
+    /// Checks if a type is some specialization of `std::basic_string_view` with any `CharT`
+    template <typename T> concept StringViewSpecialization = detail::IsStringSpecialization<T>::value;
+
+    /// Checks if a type is a specialization of either `std::basic_string` or `std::basic_string_view`
+    template <typename T>
+    concept StringOrStringViewSpecialization = StringSpecialization<T> || StringViewSpecialization<T>;
 } // namespace zinc
 
 #endif

@@ -25,7 +25,7 @@
 namespace zinc
 {
     /// Signed word-sized integer type
-    using SignedWord = std::make_signed<std::size_t>;
+    using SignedWord = std::make_signed_t<std::size_t>;
 
     /// Shorthand for `typename T::value_type`
     template <HasValueType T> using ValueT = typename T::value_type;

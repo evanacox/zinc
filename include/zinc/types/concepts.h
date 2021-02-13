@@ -19,7 +19,10 @@
 #ifndef ZINC_TYPES_CONCEPTS
 #define ZINC_TYPES_CONCEPTS
 
+#include "zinc/types/allocators.h"
 #include <concepts>
+#include <string>
+#include <string_view>
 #include <type_traits>
 
 namespace zinc
@@ -56,6 +59,13 @@ namespace zinc
 
     /// Checks if a type has a `::pos_type` member type
     template <typename T> concept HasPosType = requires { typename T::pos_type; };
+
+    /// Checks if a type is `Cpp17Erasable` with a specific allocator
+    template <typename T, typename Alloc = std::allocator<T>>
+    concept Erasable = Allocator<Alloc, T>&& requires(Alloc a, T* p)
+    {
+        AllocTraits<Alloc>::destroy(a, p);
+    };
 } // namespace zinc
 
 #endif

@@ -16,37 +16,19 @@
 //                                                                           //
 //======---------------------------------------------------------------======//
 
-#ifndef ZINC_UTIL_OPTIONS_PARSER
-#define ZINC_UTIL_OPTIONS_PARSER
+#ifndef ZINC_TYPES_STORAGE
+#define ZINC_TYPES_STORAGE
 
 #include "zinc/types/concepts.h"
-#include "zinc/util/options/args.h"
 #include <cstddef>
-#include <optional>
-#include <string>
-#include <type_traits>
 
 namespace zinc
 {
-    namespace detail
+    /// Slightly better `std::aligned_storage_t`, guaranteed to be exactly enough space
+    /// for an aligned `T` and no more.
+    template <typename T> struct StorageFor
     {
-        //
-    } // namespace detail
-
-    class OptParser
-    {
-    public:
-        OptParser() = default;
-
-        template <ArgumentType T> OptParser& add_arg(Arg<T> argument)
-        {
-            (void)argument;
-
-            return *this;
-        }
-
-    private:
-        std::optional<std::string> help_message_;
+        alignas(T) std::byte storage[sizeof(std::byte)];
     };
 } // namespace zinc
 

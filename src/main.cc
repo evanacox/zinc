@@ -18,15 +18,21 @@
 
 #include "zinc/zinc.h"
 #include <iostream>
-#include <thread>
 
 using namespace std::chrono_literals;
 
-int main(int argc, char** argv)
+using Traits = zinc::detail::DefaultSetTraits<int, std::hash<int>, std::equal_to<>, std::allocator<int>>;
+
+int main()
 {
-    if (argc == 2)
+    zinc::detail::RawHashSet<Traits> set(5);
+    set.insert(1);
+    set.insert(5);
+    set.insert(3);
+    set.insert(6);
+
+    for (auto i : set)
     {
-        auto file = zinc::open_file(argv[1]);
-        std::cout << "contents of '" << file.path() << "': " << file.content() << "\n\n";
+        std::cout << i << '\n';
     }
 }

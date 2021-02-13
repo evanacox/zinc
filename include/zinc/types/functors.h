@@ -20,5 +20,6 @@
 #define ZINC_TYPES_FUNCTORS
 
 #include "zinc/types/functors/equal_to.h"
+#include "zinc/types/functors/hash.h"
 
 #endif

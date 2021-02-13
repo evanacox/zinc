@@ -27,6 +27,14 @@
 
 namespace zinc
 {
+    namespace detail
+    {
+        template <typename Key, typename Value, typename Hash, typename Eq, typename Allocator> struct FlatHashMapTraits
+        {
+            //
+        };
+    } // namespace detail
+
     /// Better default hash map than `std::unordered_map`. Implemented using
     /// a hash table (as the name implies), with linear probing. No
     /// separate chaining, no stability for values, but no indirection on
@@ -35,9 +43,9 @@ namespace zinc
     /// a `HashMap<K, std::unique_ptr<V>>` works just fine.
     template <typename Key,
         typename Value,
-        typename Hash = std::hash<Key>,
-        typename Eq = zinc::EqualTo<Key>,
-        typename Allocator = std::allocator<std::pair<Key, Value>>>
+        HashFn<Key> Hash = zinc::Hash<Key>,
+        EqFn<Key> Eq = zinc::EqualTo<Key>,
+        Allocator<std::pair<const Key, Value>> Allocator = std::allocator<std::pair<const Key, Value>>>
     class HashMap
     {
         //

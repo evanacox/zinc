@@ -144,7 +144,7 @@ namespace zinc
             if (!file_->is_open())
             {
                 // figures out r/w regardless of user-given mode
-                figure_out_file_perms();
+                readwrite_ = can_read_or_write();
 
                 if (readwrite_ == std::pair{false, false})
                 {
@@ -213,12 +213,12 @@ namespace zinc
 
                 update_contents();
 
-                last_updated_ = std::filesystem::last_write_time(path_);
+                last_updated_ = std::filesystem::last_write_time(path());
 
                 return *this;
             }
 
-            throw BadFileOperation(detail::FileUnwritablePlaceholder{}, path_);
+            throw BadFileOperation(detail::FileUnwritablePlaceholder{}, path());
         }
 
         /// Writes `object` to the file and updates the internal file content buffer.
@@ -242,7 +242,7 @@ namespace zinc
                 const auto new_size = write_and_report(object);
                 const auto difference = new_size - size;
 
-                if (readable())
+                [[likely]] if (readable())
                 {
                     file_->seekg(position);
                     data_.resize(data_.size() + difference);
@@ -252,12 +252,12 @@ namespace zinc
                     file_->read(data_.data() + position, data_.size() - position + difference);
                 }
 
-                last_updated_ = std::filesystem::last_write_time(path_);
+                last_updated_ = std::filesystem::last_write_time(path());
 
                 return *this;
             }
 
-            throw BadFileOperation(detail::FileUnwritablePlaceholder{}, path_);
+            throw BadFileOperation(detail::FileUnwritablePlaceholder{}, path());
         }
 
         /// Appends `object` to the file and updates the internal file content buffer.
@@ -280,19 +280,19 @@ namespace zinc
                 const auto new_size = write_and_report(object);
                 const auto difference = new_size - size;
 
-                if (readable())
+                [[likely]] if (readable())
                 {
                     data_.resize(data_.size() + difference);
                     file_->seekg(-difference, std::ios_base::end);
                     file_->read(data_.data() + data_.size() - difference, difference);
                 }
 
-                last_updated_ = std::filesystem::last_write_time(path_);
+                last_updated_ = std::filesystem::last_write_time(path());
 
                 return *this;
             }
 
-            throw BadFileOperation(detail::FileUnwritablePlaceholder{}, path_);
+            throw BadFileOperation(detail::FileUnwritablePlaceholder{}, path());
         }
 
         /// Gets the file's length. Like `std::string`, it pays no mind to encoding.
@@ -326,13 +326,14 @@ namespace zinc
             update_contents();
         }
 
-        /// Returns if the file is actually writable by the program.
-        [[nodiscard]] bool writable() const noexcept { return readwrite_.second; }
-
         /// Returns if the file is actually readable by the program.
         [[nodiscard]] bool readable() const noexcept { return readwrite_.first; }
 
-        /// Returns the path of the file
+        /// Returns if the file is actually writable by the program.
+        [[nodiscard]] bool writable() const noexcept { return readwrite_.second; }
+
+        /// Returns the path of the file. `BasicFile` uses absolute paths exclusively, so
+        /// the path returned is absolute.
         [[nodiscard]] const std::filesystem::path& path() const noexcept { return path_; }
 
         /// Returns the value at a specific index in the file
@@ -383,33 +384,40 @@ namespace zinc
     protected:
         // writes an object, flushes the file, and reports the new size.
         // does not restore streams original position, it's left at the end
-        template <Printable T> pos_type write_and_report(const T& object)
+        template <Printable T> [[nodiscard]] pos_type write_and_report(const T& object)
         {
             *file_ << object << std::flush;
 
             return real_file_length();
         }
 
-        pos_type real_file_length() const noexcept
+        [[nodiscard]] pos_type real_file_length() const noexcept
         {
             file_->seekg(0, std::ios_base::end);
 
             return file_->tellg();
         }
 
-        void figure_out_file_perms()
+        // tries opening the file in IN mode and OUT mode to see what it's able to do
+        // return value is {read, write}
+        std::pair<bool, bool> can_read_or_write()
         {
+            std::pair<bool, bool> readwrite = {true, true};
+
             file_->clear();
             file_->open(path_, std::ios_base::in);
 
-            if (!file_->is_open()) readwrite_.first = false;
+            if (!file_->is_open()) readwrite.first = false;
 
             file_->clear();
             file_->open(path_, std::ios_base::out);
 
-            if (!file_->is_open()) readwrite_.second = false;
+            if (!file_->is_open()) readwrite.second = false;
+
+            return readwrite;
         }
 
+        // updates the file contents if the file is newer than we're keeping track of
         void update_contents()
         {
             if (!readable()) throw BadFileOperation(detail::FileUnreadablePlaceholder{}, path_);
@@ -418,7 +426,7 @@ namespace zinc
             {
                 data_.clear();
 
-                if (const auto length = real_file_length(); length != 0)
+                [[likely]] if (const auto length = real_file_length(); length != 0)
                 {
                     data_.resize(length);
                     file_->seekg(0, std::ios_base::beg);
@@ -437,9 +445,25 @@ namespace zinc
         std::pair<bool, bool> readwrite_ = {true, true};
     };
 
+    /// `BasicFile`s represent actual files, therefore there's no reason to compare anything except the paths.
+    /// `BasicFile` paths are absolute, so no need to even do conversions there. Also, it doesn't really make sense
+    /// to compare two files opened with different `CharT`s, and if it's really needed, comparison is possible
+    /// with member functions.
+    ///
+    /// # Parameters
+    /// - `lhs`: First file to compare
+    /// - `rhs`: Second file to compare
+    ///
+    /// # Returns
+    /// Whether both files are going to the same file
+    template <Charlike CharT> bool operator==(const BasicFile<CharT>& lhs, const BasicFile<CharT>& rhs)
+    {
+        return lhs.path() == rhs.path();
+    }
+
     /// Setting for if files should be opened in binary mode or not
     ///
-    /// C++ fstreams have a "binary" mode that prevents implicit conversion
+    /// C++ file streams have a "binary" mode that prevents implicit conversion
     /// of `'\n'` to the platform's newline (whether it be CR, LF, or CRLF)
     enum class ConvertNewlines
     {
@@ -452,8 +476,7 @@ namespace zinc
     /// # Parameters:
     /// - `path`: The path to open
     /// - `mode`: The mode to pass to `BasicFile`s constructor (and internal `std::basic_fstream`).
-    template <Charlike CharT>
-    BasicFile<CharT> open_file_with(std::filesystem::path path, ConvertNewlines mode = ConvertNewlines::disabled)
+    template <Charlike CharT> BasicFile<CharT> open_file_with(std::filesystem::path path, ConvertNewlines mode)
     {
         auto options = std::ios_base::in | std::ios_base::out;
 
@@ -468,17 +491,13 @@ namespace zinc
     /// Convenience alias to `BasicFile<char>` for the most common use cases.
     using File = BasicFile<char>;
 
-    /// Convience function mapping to `open_file_with<char>(std::move(path), std::ios::in
-    /// | std::ios::out | std::ios::binary)`.
-    ///
-    /// Reasoning for the mode choice: converting some of the bytes depending on the platform
-    /// should be opt-in, not opt-out. The option to opt-in is always there.
-    ///
+    /// Convenience function mapping to `open_file_with<char>(std::move(path), ConvertNewlines::disabled)`.
     inline File open_file(std::filesystem::path path, ConvertNewlines mode = ConvertNewlines::disabled)
     {
         return open_file_with<char>(std::move(path), mode);
     }
 
+    /// Convenience function for opening and immediately reading a file.
     inline std::string read_file(std::filesystem::path path, ConvertNewlines mode = ConvertNewlines::disabled)
     {
         auto file = open_file(std::move(path), mode);

@@ -29,21 +29,10 @@ namespace zinc
 {
     namespace detail
     {
-        template <typename T> struct IsStringSpecialization : std::false_type
-        {};
-
-        template <typename CharT> struct IsStringSpecialization<std::basic_string_view<CharT>> : std::true_type
-        {};
-
-        template <typename CharT> struct IsStringSpecialization<std::basic_string<CharT>> : std::true_type
-        {};
-
-        template <typename T> concept StringSpecialization = IsStringSpecialization<T>::value;
-
         template <typename CharT> struct StringEq
         {
             using StringView = std::basic_string_view<CharT>;
-            using StringRef = const std::basic_string<CharT> &;
+            using StringRef = const std::basic_string<CharT>&;
 
             constexpr bool operator()(StringView lhs, StringView rhs) const noexcept { return lhs == rhs; }
 
@@ -55,13 +44,23 @@ namespace zinc
         };
     } // namespace detail
 
-    /// Zinc wrapper around `std::equal_to`. Used to provide heterogenous lookup on containers,
+    /// Zinc wrapper around `std::equal_to`. Used to provide heterogeneous lookup on containers,
     /// without messing with `std::equal_to`s interactions with `std::` types.
     template <typename T> struct EqualTo : std::equal_to<T>
     {};
 
-    template <detail::StringSpecialization T> struct EqualTo<T> : detail::StringEq<ValueT<T>>
+    /// Specialization for `std::basic_string` and `std::basic_string_view` types that enables
+    /// heterogeneous string lookup
+    template <StringOrStringViewSpecialization T> struct EqualTo<T> : detail::StringEq<ValueT<T>>
     {};
+
+    /// Checks if a functor is usable as an equality function for a type `T`.
+    template <typename Eq, typename T> concept EqFn = requires(const Eq eq, T a, T b)
+    {
+        // clang-format off
+        { eq(a, b) } -> std::same_as<bool>;
+        // clang-format on
+    };
 } // namespace zinc
 
 #endif

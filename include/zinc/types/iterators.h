@@ -16,38 +16,10 @@
 //                                                                           //
 //======---------------------------------------------------------------======//
 
-#ifndef ZINC_UTIL_OPTIONS_PARSER
-#define ZINC_UTIL_OPTIONS_PARSER
+#ifndef ZINC_TYPES_ITERATORS
+#define ZINC_TYPES_ITERATORS
 
-#include "zinc/types/concepts.h"
-#include "zinc/util/options/args.h"
-#include <cstddef>
-#include <optional>
-#include <string>
-#include <type_traits>
-
-namespace zinc
-{
-    namespace detail
-    {
-        //
-    } // namespace detail
-
-    class OptParser
-    {
-    public:
-        OptParser() = default;
-
-        template <ArgumentType T> OptParser& add_arg(Arg<T> argument)
-        {
-            (void)argument;
-
-            return *this;
-        }
-
-    private:
-        std::optional<std::string> help_message_;
-    };
-} // namespace zinc
+#include "zinc/types/iterators/enumerate.h"
+#include "zinc/types/iterators/range.h"
 
 #endif

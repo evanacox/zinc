@@ -19,6 +19,7 @@
 #ifndef ZINC_DATA_DETAIL_RAW_HASH_MAP
 #define ZINC_DATA_DETAIL_RAW_HASH_MAP
 
+#include "zinc/data/detail/map_traits.h"
 #include "zinc/data/detail/raw_hash_set.h"
 #include "zinc/types/functors.h"
 #include <functional>
@@ -28,7 +29,7 @@
 namespace zinc::detail
 {
     /// Extensions to `RawHashSet` meant for K:V stores instead of just V stores
-    template <typename HashTraits> class RawHashMap : detail::RawHashSet<HashTraits>
+    template <typename HashTraits> class RawHashMap : RawHashSet<HashTraits>
     {
         //
     };
