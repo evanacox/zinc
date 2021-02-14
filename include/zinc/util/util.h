@@ -21,5 +21,6 @@
 
 #include "zinc/util/finally.h"
 #include "zinc/util/options.h"
+#include "zinc/util/uninitialized.h"
 
 #endif

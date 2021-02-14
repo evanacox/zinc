@@ -16,10 +16,10 @@
 //                                                                           //
 //======---------------------------------------------------------------======//
 
-#ifndef ZINC_DATA_FLAT_HASH_MAP
-#define ZINC_DATA_FLAT_HASH_MAP
+#ifndef ZINC_DATA_FLAT_HASH_SET
+#define ZINC_DATA_FLAT_HASH_SET
 
-#include "zinc/data/detail/raw_hash_map.h"
+#include "zinc/data/detail/raw_hash_set.h"
 #include "zinc/types/functors.h"
 #include <functional>
 #include <memory>
@@ -27,27 +27,18 @@
 
 namespace zinc
 {
-    /// Better default hash map than `std::unordered_map`. Implemented using
-    /// a hash table (as the name implies), with linear probing. No
-    /// separate chaining, no stability for values, but no indirection on
-    /// accesses. `NodeHashMap` exists when stability is needed for both key
-    /// and value, and when only value stability is needed, something like
-    /// a `HashMap<K, std::unique_ptr<V>>` works just fine.
-    template <typename Value,
-        typename Hash = std::hash<Value>,
-        typename Eq = zinc::EqualTo<Value>,
-        typename Allocator = std::allocator<Value>>
+    /// Better default hash set than `std::unordered_set`. Implemented using
+    /// a flat hash table with linear probing. No separate chaining, no stability
+    /// for values, but no indirection on accesses. `NodeHashMap` exists when
+    /// stability is needed for the key.
+    template <typename Key,
+        typename Hash = std::hash<Key>,
+        typename Eq = zinc::EqualTo<Key>,
+        typename Allocator = std::allocator<Key>>
     class HashSet
     {
         //
     };
 } // namespace zinc
 
-#endif //
-// Created by evan on 2/6/21.
-//
-
-#ifndef LIBZINC_FLAT_HASH_SET_H
-#define LIBZINC_FLAT_HASH_SET_H
-
-#endif // LIBZINC_FLAT_HASH_SET_H
+#endif

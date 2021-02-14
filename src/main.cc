@@ -20,18 +20,54 @@
 #include <iostream>
 
 using namespace std::chrono_literals;
+using zinc::detail::RawHashSet;
 
-using Traits = zinc::detail::DefaultSetTraits<int, std::hash<int>, std::equal_to<>, std::allocator<int>>;
+template <> struct zinc::EqualTo<int>
+{
+    constexpr bool operator()(int lhs, std::string_view) const noexcept { return lhs == 3; }
+
+    constexpr bool operator()(std::string_view, int rhs) const noexcept { return rhs == 3; }
+
+    constexpr bool operator()(int lhs, int rhs) const noexcept { return lhs == rhs; }
+};
+
+using Traits = zinc::detail::
+    DefaultSetTraits<std::string, std::hash<std::string>, zinc::EqualTo<std::string>, std::allocator<std::string>>;
+
+auto insert(RawHashSet<Traits>& set, std::string n)
+{
+    const auto result = set.insert(n);
+
+    std::cout << "inserted '" << n << "'. load factor: " << set.load_factor() << '\n';
+
+    return result;
+}
 
 int main()
 {
-    zinc::detail::RawHashSet<Traits> set(5);
-    set.insert(1);
-    set.insert(5);
-    set.insert(3);
-    set.insert(6);
+    RawHashSet<Traits> set(5);
+
+    insert(set, "lol");
+    insert(set, "hello");
+    insert(set, "thing");
 
     for (auto i : set)
+    {
+        std::cout << i << '\n';
+    }
+
+    const auto [success, _] = insert(set, "12");
+
+    if (success)
+    {
+        std::cout << "lol wtf\n";
+    }
+
+    std::cout << set.contains("12");
+
+    auto new_set = set;
+
+    for (auto i : new_set)
     {
         std::cout << i << '\n';
     }

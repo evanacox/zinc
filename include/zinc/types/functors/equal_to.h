@@ -61,6 +61,14 @@ namespace zinc
         { eq(a, b) } -> std::same_as<bool>;
         // clang-format on
     };
+
+    template <typename U, typename T, typename Eq = zinc::EqualTo<T>>
+    concept EqComparable = EqFn<Eq, T>&& requires(const Eq eq, T t, U u)
+    {
+        // clang-format off
+        { eq(t, u) } -> std::same_as<bool>;
+        // clang-format on
+    };
 } // namespace zinc
 
 #endif

@@ -58,8 +58,10 @@ namespace zinc::detail
         }
 
         // moves a slot into a new slot, without destroying the old one
-        static void move_to(Allocator<SlotValue> auto& alloc, SlotValue* source, SlotValue* dest)
+        static void move_to(Allocator<SlotValue> auto& alloc, SlotValue* source, SlotValue* dest) noexcept
         {
+            // if it throws during move construction, user needs to fix their crap. it gets
+            // static-asserted by the type anyway
             construct(alloc, dest, std::move(*source));
         }
 
@@ -72,7 +74,7 @@ namespace zinc::detail
     };
 
     // default provided for Set structures, which don't use a pair
-    template <typename K> struct SetSlotTraits : SlotTraits<std::remove_const_t<K>>
+    template <typename K> struct SetSlotTraits : SlotTraits<std::remove_const_t<K>, const K>
     {
         using SlotTraitsHandledTypes = std::tuple<K>;
     };
