@@ -125,10 +125,10 @@ namespace zinc::detail
         ///
         /// # Returns
         /// `end()` if the key was not found, an iterator otherwise
-        template <EqComparable<const key_type&, key_equal> K> [[nodiscard]] iterator find(const K& key)
+        [[nodiscard]] iterator find(const EqComparable<const key_type&, key_equal> auto& key)
         {
             const auto hash_value = hash_key(key);
-            const auto [probed_index, state] = probe_for<K, false>(key, hash_value);
+            const auto [probed_index, state] = probe_for<false>(key, hash_value);
 
             if (state == BucketState::empty)
                 return end();
@@ -154,10 +154,10 @@ namespace zinc::detail
         ///
         /// # Returns
         /// `end()` if the key was not found, an iterator otherwise
-        template <EqComparable<const key_type&, key_equal> K> const_iterator find(const K& key) const
+        const_iterator find(const EqComparable<const key_type&, key_equal> auto& key) const
         {
             const auto hash_value = hash_key(key);
-            const auto [probed_index, state] = probe_for<K, false>(key, hash_value);
+            const auto [probed_index, state] = probe_for<false>(key, hash_value);
 
             if (state == BucketState::empty)
                 return end();
@@ -238,7 +238,7 @@ namespace zinc::detail
 
             const auto& key = Traits::key_from(value);
             const auto hash_value = hash_key(key);
-            const auto [index, state] = probe_for<decltype(key), true>(key, hash_value);
+            const auto [index, state] = probe_for<true>(key, hash_value);
 
             // tombstones can get re-used here, no point to leaving them as tombstones
             // when they'll just add to load_factor & get probed over anyway
@@ -512,8 +512,9 @@ namespace zinc::detail
         // `ReturnTombstones` is for methods that do/dont want to get tombstone
         // slots returned, as insertion might want it while find might not (and the
         // choice should be made at compile time)
-        template <EqComparable<key_type, key_equal> K, bool ReturnTombstones>
-        std::pair<size_type, BucketState> probe_for(const K& key, size_type index) const
+        template <bool ReturnTombstones>
+        std::pair<size_type, BucketState> probe_for(const EqComparable<const key_type&, key_equal> auto& key,
+            size_type index) const
         {
             while (true)
             {
