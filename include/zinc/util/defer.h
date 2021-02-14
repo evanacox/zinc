@@ -16,8 +16,8 @@
 //                                                                           //
 //======---------------------------------------------------------------======//
 
-#ifndef ZINC_UTIL_FINALLY
-#define ZINC_UTIL_FINALLY
+#ifndef ZINC_UTIL_DEFER
+#define ZINC_UTIL_DEFER
 
 #include <concepts>
 #include <utility>
@@ -32,28 +32,27 @@ namespace zinc
     ///
     /// Use in place of `goto exit` or one-off RAII objects for deferred
     /// cleanup code
-    template <std::invocable Lambda> class FinallyAction
+    template <std::invocable Lambda> class DeferredAction
     {
     public:
-        FinallyAction() = delete;
+        DeferredAction() = delete;
 
-        FinallyAction(const FinallyAction&) = delete;
+        DeferredAction(const DeferredAction&) = delete;
 
-        FinallyAction(FinallyAction&& other) noexcept
+        DeferredAction(DeferredAction&& other) noexcept
             : data_(std::move(other.data_))
-        {
-            other.should_invoke_ = false;
-        }
+            , should_invoke_(std::exchange(other.should_invoke_, false))
+        {}
 
-        explicit FinallyAction(Lambda&& lambda)
+        explicit DeferredAction(Lambda&& lambda)
             : data_(std::forward<Lambda>(lambda))
         {}
 
-        FinallyAction& operator=(const FinallyAction&) = delete;
+        DeferredAction& operator=(const DeferredAction&) = delete;
 
-        FinallyAction& operator=(FinallyAction&&) = delete;
+        DeferredAction& operator=(DeferredAction&&) = delete;
 
-        ~FinallyAction()
+        ~DeferredAction()
         {
             if (should_invoke_)
             {
@@ -67,16 +66,30 @@ namespace zinc
     };
 
     /// Registers some callback that is guaranteed to happen at the end of the current scope,
-    /// with exception safety and the like built in.
+    /// with exception safety and the like built-in. Useful for RAII semantics without needing
+    /// to make one-off RAII types.
     ///
     /// Returns an object that will call the callback in its destructor, this object can
     /// be stored.
     ///
+    /// # Example
+    /// ```cpp
+    /// {
+    ///     auto* foo = some_c_code();
+    ///     auto _ = defer([&] { some_c_code_cleanup(foo); })
+    ///
+    ///     // use `foo`
+    /// }
+    /// ```
+    ///
     /// # Parameters
     /// - `functor`: The callable to invoke whenever the returned object is destructed
-    template <std::invocable Fn> FinallyAction<Fn> finally(Fn&& functor)
+    ///
+    /// # Returns
+    /// Returns an object encapsulating the action, that calls the action in its destructor.
+    template <std::invocable Fn> DeferredAction<Fn> defer(Fn&& functor)
     {
-        return FinallyAction<Fn>(std::forward<Fn>(functor));
+        return DeferredAction<Fn>(std::forward<Fn>(functor));
     }
 } // namespace zinc
 

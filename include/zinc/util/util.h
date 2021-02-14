@@ -19,7 +19,7 @@
 #ifndef ZINC_UTIL_UTIL
 #define ZINC_UTIL_UTIL
 
-#include "zinc/util/finally.h"
+#include "zinc/util/defer.h"
 #include "zinc/util/options.h"
 #include "zinc/util/uninitialized.h"
 
