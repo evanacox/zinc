@@ -84,9 +84,10 @@ namespace zinc::detail
         {
             initialize_allocation(other.bucket_count());
 
-            // meta_table is technically uninitialized, so needs uninitialized_copy
-            // instead of just copy
-            ranges::uninitialized_copy(other.meta_array(), meta_array());
+            for (auto i : zinc::range_of(size_type{0}, meta_array().size()))
+            {
+                AllocTraits<RealAlloc>::construct(alloc_ref(), meta() + i, other.meta_at(i));
+            }
 
             for_each_full_slot([&](size_type index) {
                 // traits may need to do extra work, e.g with NodeHashSet
