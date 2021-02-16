@@ -20,10 +20,23 @@
 #define ZINC_TYPES_ALIASES
 
 #include "zinc/types/concepts.h"
+#include "zinc/types/pointers.h"
+#include <cstddef>
+#include <memory>
 #include <type_traits>
 
 namespace zinc
 {
+    namespace detail
+    {
+        template <typename T> struct PerfectlySizedStorage
+        {
+            alignas(T) std::byte storage[sizeof(T)];
+
+            T* as() noexcept { return pointer_cast<T*>(storage); }
+        };
+    } // namespace detail
+
     /// Signed word-sized integer type
     using SignedWord = std::make_signed_t<std::size_t>;
 
@@ -36,8 +49,8 @@ namespace zinc
     /// Shorthand for `typename T::pos_type`
     template <HasPosType T> using PosT = typename T::pos_type;
 
-    /// Shorthand for `std::aligned_storage_t<sizeof(T), alignof(T)>`
-    template <typename T> using AlignedStorageFor = std::aligned_storage_t<sizeof(T), alignof(T)>;
+    /// Gets storage that's the perfect size and alignment for
+    template <typename T> using AlignedStorageFor = detail::PerfectlySizedStorage<T>;
 } // namespace zinc
 
 #endif

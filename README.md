@@ -20,7 +20,7 @@ will attempt to find it.
 
 Building and running the benchmarks requires a system installation
 of [Google Benchmark](https://github.com/google/benchmark)
-to run, again, CMake will try to find it.
+to run. Again, CMake will try to find it.
 
 # License
 

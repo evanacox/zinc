@@ -16,10 +16,12 @@
 //                                                                           //
 //======---------------------------------------------------------------======//
 
-#ifndef ZINC_DATA_DETAIL_SET_TRAITS
-#define ZINC_DATA_DETAIL_SET_TRAITS
+#ifndef ZINC_CONTAINERS_DETAIL_SET_TRAITS
+#define ZINC_CONTAINERS_DETAIL_SET_TRAITS
 
-#include "zinc/data/detail/slot_traits.h"
+#include "zinc/containers/detail/slot_traits.h"
+#include "zinc/types/concepts.h"
+#include "zinc/types/functors.h"
 
 namespace zinc::detail
 {
@@ -61,6 +63,8 @@ namespace zinc::detail
 
         using Allocator = Alloc;
 
+        [[nodiscard]] constexpr static std::size_t initial_size() noexcept { return 32; }
+
         [[nodiscard]] constexpr static float max_load_factor() noexcept { return 0.72f; }
 
         [[nodiscard]] constexpr static const Key& key_from(const SlotValue& slot_value) { return slot_value; }
@@ -79,6 +83,7 @@ namespace zinc::detail
         typename Traits::Hasher;
         typename Traits::KeyEq;
         typename Traits::Allocator;
+        { Traits::initial_size() } noexcept -> std::convertible_to<std::size_t>;
         { Traits::max_load_factor() } noexcept -> std::same_as<float>;
         { Traits::key_from(slot) } -> std::same_as<const typename Traits::Key&>;
         { Traits::value_from(const_slot) } -> std::same_as<const typename Traits::Value&>;

@@ -16,11 +16,12 @@
 //                                                                           //
 //======---------------------------------------------------------------======//
 
-#ifndef ZINC_DATA_DETAIL_RAW_HASH_SET
-#define ZINC_DATA_DETAIL_RAW_HASH_SET
+#ifndef ZINC_CONTAINERS_DETAIL_RAW_HASH_SET
+#define ZINC_CONTAINERS_DETAIL_RAW_HASH_SET
 
-#include "zinc/data/detail/set_traits.h"
+#include "zinc/containers/detail/set_traits.h"
 #include "zinc/io/console.h"
+#include "zinc/types/aliases.h"
 #include "zinc/types/allocators.h"
 #include "zinc/types/functors.h"
 #include "zinc/types/iterators.h"
@@ -29,6 +30,7 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -228,15 +230,109 @@ namespace zinc::detail
         /// - `value`: The value to insert into the set
         ///
         /// # Effects
-        /// - If `load_factor() > bucket_count() * max_load_factor()`, set is re-hashed.
+        /// - If `size() + 1 > bucket_count() * max_load_factor()`, set is re-hashed.
         ///
         /// # Returns
-        /// Returns a reference to the inserted value
-        std::pair<bool, iterator> insert(std::convertible_to<value_type> auto&& value)
+        /// Returns `[did_insert, iterator]`. If the value is not inserted (e.g key already is present),
+        /// `[false, end()]` is returned. Otherwise, `[true, it]` is returned.
+        std::pair<iterator, bool> insert(value_type&& value) { return emplace(std::move(value)); }
+
+        /// Inserts a value if a value with the same key does not already exist in the
+        /// table, and returns a reference to that value.
+        ///
+        /// # Parameters
+        /// - `value`: The value to insert into the set
+        ///
+        /// # Effects
+        /// - If `size() + 1 > bucket_count() * max_load_factor()`, set is re-hashed.
+        ///
+        /// # Returns
+        /// Returns `[did_insert, iterator]`. If the value is not inserted (e.g key already is present),
+        /// `[false, end()]` is returned. Otherwise, `[true, it]` is returned.
+        std::pair<iterator, bool> insert(const value_type& value) { return emplace(value); }
+
+        /// Inserts a value if a value with the same key does not already exist in the
+        /// table, and returns a reference to that value.
+        ///
+        /// # Parameters
+        /// - `value`: The value to insert into the set
+        ///
+        /// # Effects
+        /// - If `size() + 1 > bucket_count() * max_load_factor()`, set is re-hashed.
+        ///
+        /// # Returns
+        /// Returns `[did_insert, iterator]`. If the value is not inserted (e.g key already is present),
+        /// `[false, end()]` is returned. Otherwise, `[true, it]` is returned.
+        iterator insert(const_iterator, value_type&& value) { return emplace(std::move(value)).first; }
+
+        /// Inserts a value if a value with the same key does not already exist in the
+        /// table, and returns a reference to that value.
+        ///
+        /// # Parameters
+        /// - `value`: The value to insert into the set
+        ///
+        /// # Effects
+        /// - If `size() + 1 > bucket_count() * max_load_factor()`, set is re-hashed.
+        ///
+        /// # Returns
+        /// Returns `[did_insert, iterator]`. If the value is not inserted (e.g key already is present),
+        /// `[false, end()]` is returned. Otherwise, `[true, it]` is returned.
+        iterator insert(const_iterator, const value_type& value) { return emplace(value).first; }
+
+        /// Inserts each element between `(first, last]` into the set. Insertion order
+        /// of duplicates is guaranteed in contrast to the STL, the first match to a key is
+        /// the one actually inserted.
+        ///
+        /// # Parameters
+        /// - `first`: A starting iterator
+        /// - `last`: The end iterator to insert up to
+        ///
+        /// # Effects
+        /// - If `size() + std::distance(first, last) > bucket_count() * max_load_factor()`, set is re-hashed.
+        void insert(std::input_iterator auto first,
+            std::input_iterator auto last) requires std::constructible_from<value_type, decltype(*first)>
+        {
+            for (std::input_iterator auto it = first; it != last; ++it)
+            {
+                emplace(*it);
+            }
+        }
+
+        /// Inserts each element between `(first, last]` into the set. Insertion order
+        /// of duplicates is guaranteed in contrast to the STL, the first match to a key is
+        /// the one actually inserted. Each element
+        ///
+        /// # Parameters
+        /// - `init_list`: The initializer list to read through
+        ///
+        /// # Effects
+        /// - If `size() + init_list.size() > bucket_count() * max_load_factor()`, set is re-hashed.
+        void insert(std::initializer_list<value_type> init_list)
+        {
+            for (auto& element : init_list)
+            {
+                emplace(std::move(element));
+            }
+        }
+
+        ///
+        iterator emplace_hint(const_iterator, auto&&... args)
+        {
+            return emplace(std::forward<decltype(args)>(args)...).first;
+        }
+
+        /// Tries to emplace a value if possible. Currently does not actually do in-place technically, just does
+        /// an in-place construction on some storage and then moves it into the final location due to the need
+        /// of having a key.
+        std::pair<iterator, bool> emplace(auto&&... args) //
+            requires std::constructible_from<value_type, decltype(args)...>
         {
             rehash_if_required();
 
-            const auto& key = Traits::key_from(value);
+            PerfectlySizedStorage<Stored> raw;
+            Traits::construct(alloc_ref(), raw.as(), std::forward<decltype(args)>(args)...);
+
+            const auto& key = Traits::key_from(*raw.as());
             const auto hash_value = hash_key(key);
             const auto [index, state] = probe_for<true>(key, hash_value);
 
@@ -244,7 +340,7 @@ namespace zinc::detail
             // when they'll just add to load_factor & get probed over anyway
             if (state != BucketState::full)
             {
-                construct_at(index, std::forward<decltype(value)>(value));
+                Traits::transfer_to(alloc_ref(), raw.as(), value_ptr_to(index));
                 update_meta(index, BucketState::full);
 
                 if (state == BucketState::empty)
@@ -252,13 +348,100 @@ namespace zinc::detail
                     ++size_;
                 }
 
-                return {true, iterator_to(index)};
+                return {iterator_to(index), true};
             }
 
-            return {false, iterator_to(index)};
+            return {iterator_to(index), false};
         }
 
-        /// Gets the max load factor that the set will get to before it hashes itself
+        /// Erases a value from the set based off of an iterator position
+        void erase(iterator position)
+        {
+            auto index = position.index_;
+            Traits::destroy(alloc_ref(), value_ptr_to(index));
+            update_meta(index, BucketState::tombstone);
+            size_ -= 1;
+        }
+
+        /// Erases an element if one that matches `key` exists
+        void erase(const EqComparable<const key_type&, key_equal> auto& key)
+        {
+            if (auto it = find(key); it != end())
+            {
+                erase(it);
+            }
+        }
+
+        /// "Extracts" a value from the set, similar to `unordered_set::extract` in C++17.
+        /// Used for removing move-only types from the set.
+        ///
+        /// Requires that `position` be a valid iterator that's **not** equivalent to `end()`.
+        /// If `end()` is passed, behavior becomes unpredictable (although there are assertions
+        /// against it).
+        [[nodiscard]] value_type extract(iterator position)
+        {
+            assert("position is not a valid iterator in `extract`" && position != end());
+
+            auto value = std::move(*position);
+            erase(position);
+
+            return value;
+        }
+
+        /// Helper overload for `extract(find(key))`. Simply passes the result of `find(key)` directly into
+        /// `extract`.
+        [[nodiscard]] value_type extract(const EqComparable<const key_type&, key_equal> auto& key)
+        {
+            return extract(find(key));
+        }
+
+        /// Tries to "merge" two sets with the same `Traits` object. Elements are moved
+        /// and then `insert`ed into `*this`.
+        void merge(RawHashSet& other)
+        {
+            for (auto& elem : other)
+            {
+                insert(std::move(elem));
+            }
+        }
+
+        /// Destroys every element in the set, and sets `size` to `0`.
+        /// No space owned by the set itself is deallocated, simply the destructors
+        /// on every element are called and their slots are marked as "empty."
+        void clear()
+        {
+            clear_slots();
+            initialize_meta();
+        }
+
+        /// If `new_size` is over `bucket_count()`, rehashes to have that many buckets. All elements
+        /// are moved, and all iterators/pointers/references are invalidated.
+        ///
+        /// # Parameters
+        /// - `new_size`: The new capacity to rehash to
+        ///
+        /// # Effects
+        /// If `new_size` is larger than `bucket_count()`, every single iterator is invalidated.
+        /// The entire container is re-hashed and every element is moved into a new allocation
+        void rehash(size_type new_size)
+        {
+            if (new_size > bucket_count())
+            {
+                auto alloc = new_allocation(new_size);
+                transfer_to_new_allocation(alloc);
+                swap_allocation(alloc);
+            }
+        }
+
+        /// Alias to `rehash`, here for the sake of compatibility with the `unordered_*` APIs
+        ///
+        /// Exactly equivalent to `rehash(new_size)`
+        void reserve(size_type new_size) { return rehash(new_size); }
+
+        /// Gets the max load factor that the set will get to before it hashes itself.
+        ///
+        /// This number is something between `0` and `1` and depends on the exact hash set/map being used.
+        /// As it's between `0` and `1`, the number can be treated as a percentage.
         [[nodiscard]] constexpr float max_load_factor() const noexcept { return Traits::max_load_factor(); }
 
         /// Gets the current load factor, equivalent to `static_cast<float>(table.size() / table.bucket_count());`
@@ -278,21 +461,6 @@ namespace zinc::detail
         /// Checks if the set is completely empty, equivalent to `set.size() == 0`
         [[nodiscard]] bool empty() const noexcept { return size() == 0; }
 
-        /// If `new_size` is over `bucket_count()`, rehashes to have that many buckets. All elements
-        /// are moved, and all iterators/pointers/references are invalidated.
-        ///
-        /// # Parameters
-        /// - `new_size`: The new capacity to rehash to
-        void rehash(size_type new_size)
-        {
-            if (new_size > bucket_count())
-            {
-                auto alloc = new_allocation(new_size);
-                transfer_to_new_allocation(alloc);
-                swap_allocation(alloc);
-            }
-        }
-
         /// Gets an iterator to the first value of the table
         [[nodiscard]] iterator begin() noexcept
         {
@@ -311,6 +479,7 @@ namespace zinc::detail
             return iterator_to(end_index);
         }
 
+        /// Gets a constant iterator to the first element
         [[nodiscard]] const_iterator begin() const noexcept
         {
             const auto first_full = ranges::find(meta_array(), BucketState::full);
@@ -319,6 +488,7 @@ namespace zinc::detail
             return iterator_to(index);
         }
 
+        /// Gets a constant past-the-end iterator
         [[nodiscard]] const_iterator end() const noexcept
         {
             const auto meta = meta_array();
@@ -327,30 +497,32 @@ namespace zinc::detail
             return iterator_to(end_index);
         }
 
+        /// Gets a constant iterator to the first element
         [[nodiscard]] const_iterator cbegin() const noexcept { return begin(); }
 
+        /// Gets a constant past-the-end iterator
         [[nodiscard]] const_iterator cend() const noexcept { return end(); }
-
-        [[nodiscard]] reverse_iterator rbegin() noexcept { return std::make_reverse_iterator(begin()); }
-
-        [[nodiscard]] reverse_iterator rend() noexcept { return std::make_reverse_iterator(end()); }
-
-        [[nodiscard]] const_reverse_iterator crbegin() const noexcept { return std::make_reverse_iterator(begin()); }
-
-        [[nodiscard]] const_reverse_iterator crend() const noexcept { return std::make_reverse_iterator(end()); }
 
         /// Checks if two set are equal.
         ///
         /// A set is considered "equal" when the following conditions hold:
         /// - `a.size() == b.size()`
         /// - Every element in `a` has an element in `b` with the same key and same value
-        [[nodiscard]] bool operator==(const RawHashSet& other) const noexcept
+        [[nodiscard]] bool operator==(const RawHashSet& other) const
         {
-            if (this == &other) return true;
-
             if (other.size() != size()) return false;
 
-            // TODO
+            const auto other_end = other.end();
+
+            for (const auto& element : *this)
+            {
+                const auto it = other.find(element);
+
+                if (it == other_end || *it != element)
+                {
+                    return false;
+                }
+            }
 
             return true;
         }
@@ -389,9 +561,10 @@ namespace zinc::detail
         {
             using MaybeConstBuffer = std::conditional_t<std::is_const_v<Value>, const std::byte*, std::byte*>;
             using MaybeConstStored = std::conditional_t<std::is_const_v<Value>, const Stored, Stored>;
-            using iterator_category = std::bidirectional_iterator_tag;
+            using iterator_category = std::input_iterator_tag;
             using value_type = Value;
             using reference = Value&;
+            using pointer = Value*;
             using size_type = RawHashSet::size_type;
 
             RawHashSetIterator() = default;
@@ -420,6 +593,8 @@ namespace zinc::detail
                 return Traits::value_from(pointer_cast<MaybeConstStored*>(buffer_)[index_]);
             }
 
+            pointer operator->() const noexcept { return std::addressof(**this); }
+
             RawHashSetIterator& operator++() noexcept
             {
                 find_next_full();
@@ -432,22 +607,6 @@ namespace zinc::detail
                 const auto copy = *this;
 
                 find_next_full();
-
-                return copy;
-            }
-
-            RawHashSetIterator& operator--() noexcept
-            {
-                find_next_full_backwards();
-
-                return *this;
-            }
-
-            RawHashSetIterator operator--(int) noexcept
-            {
-                const auto copy = *this;
-
-                find_next_full_backwards();
 
                 return copy;
             }
@@ -477,17 +636,9 @@ namespace zinc::detail
                 }
             }
 
-            void find_next_full_backwards()
-            {
-                --index_; // get past current element, prevents an infinite loop
-
-                while (!is_at_end() && !is_current_full())
-                {
-                    --index_;
-                };
-            }
-
         private:
+            friend class RawHashSet<Traits>;
+
             MaybeConstBuffer buffer_ = nullptr;
             size_type capacity_ = 0;
             size_type index_ = 0;
@@ -577,6 +728,11 @@ namespace zinc::detail
         // checks if the table needs to be rehashed, and rehashes if it does
         void rehash_if_required()
         {
+            if (size() == 0)
+            {
+                rehash(Traits::initial_size());
+            }
+
             if (should_resize())
             {
                 rehash(capacity_ * 2);
@@ -605,7 +761,7 @@ namespace zinc::detail
         // rehashing each element. `new_alloc` is a pair holding the number of slots
         // in the new allocation and a pointer to the beginning, must be a pointer to
         // the first element. Pointer is assumed to be from `new_allocation` and point to
-        // data with the same layout as is expected for this class
+        // containers with the same layout as is expected for this class
         template <bool Copy> void setup_new_allocation(Allocation new_alloc)
         {
             const auto meta = meta_from(new_alloc);
@@ -793,12 +949,6 @@ namespace zinc::detail
             return pointer_cast<const std::byte*>(values());
         }
 
-        void construct_at(size_type index, auto&&... args) noexcept
-            requires std::constructible_from<value_type, decltype(args)...>
-        {
-            Traits::construct(alloc_ref(), value_ptr_to(index), std::forward<decltype(args)>(args)...);
-        }
-
         [[nodiscard]] bool is_full_at(size_type slot) const noexcept { return meta_at(slot) == BucketState::full; }
 
         [[nodiscard]] bool is_empty_at(size_type slot) const noexcept { return meta_at(slot) == BucketState::empty; }
@@ -811,8 +961,7 @@ namespace zinc::detail
 
         [[nodiscard]] const RealAlloc& alloc_ref() const noexcept { return alloc_; }
 
-    private:
-        // Meta and data tables are all in one allocation, both tables being the same length,
+        // Meta and containers tables are all in one allocation, both tables being the same length,
         // at all times. meta_table()[i] will always be the state for whatever value lies at values()[i].
         //
         // [ VALUE, VALUE, VALUE, VALUE, meta, meta, meta, meta ]

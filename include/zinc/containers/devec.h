@@ -16,8 +16,8 @@
 //                                                                           //
 //======---------------------------------------------------------------======//
 
-#ifndef ZINC_DATA_DOUBLE_ENDED_VEC
-#define ZINC_DATA_DOUBLE_ENDED_VEC
+#ifndef ZINC_CONTAINERS_DEVEC
+#define ZINC_CONTAINERS_DEVEC
 
 #include "zinc/types/functors.h"
 #include <functional>
@@ -36,7 +36,7 @@ namespace zinc
     /// expands inward from both ends and doesn't care which end you insert
     /// at more, but it also loses complete contiguity. This type is completely
     /// contiguous but has to do more work it keep it that way.
-    template <typename T, typename Alloc = std::allocator<T>> class DoubleEndedVec
+    template <typename T, typename Alloc = std::allocator<T>> class DeVec
     {
         //
     };

@@ -16,10 +16,10 @@
 //                                                                           //
 //======---------------------------------------------------------------======//
 
-#ifndef ZINC_DATA_HASH_MAP
-#define ZINC_DATA_HASH_MAP
+#ifndef ZINC_CONTAINERS_HASH_MAP
+#define ZINC_CONTAINERS_HASH_MAP
 
-#include "zinc/data/detail/raw_hash_map.h"
+#include "zinc/containers/detail/raw_hash_map.h"
 #include "zinc/types/functors.h"
 #include <functional>
 #include <memory>
@@ -29,11 +29,9 @@ namespace zinc
 {
     namespace detail
     {
-        template <typename Key, typename Value, typename Hash, typename Eq, typename Allocator> struct FlatHashMapTraits
-        {
-            //
-        };
-    } // namespace detail
+        template <typename K, typename V, typename H, typename E, typename A>
+        using HashMapTraits = DefaultMapTraits<K, V, H, E, A>;
+    }
 
     /// Better default hash map than `std::unordered_map`. Implemented using
     /// a hash table (as the name implies), with linear probing. No
@@ -46,9 +44,86 @@ namespace zinc
         HashFn<Key> Hash = zinc::Hash<Key>,
         EqFn<Key> Eq = zinc::EqualTo<Key>,
         Allocator<std::pair<const Key, Value>> Allocator = std::allocator<std::pair<const Key, Value>>>
-    class HashMap
+    class HashMap : private detail::RawHashMap<detail::DefaultMapTraits<Key, Value, Hash, Eq, Allocator>>
     {
-        //
+        using Traits = detail::DefaultMapTraits<Key, Value, Hash, Eq, Allocator>;
+        using Base = detail::RawHashMap<Traits>;
+
+    public:
+        using key_type = typename Base::key_type;
+        using value_type = typename Base::value_type;
+        using mapped_type = typename Base::mapped_type;
+        using size_type = typename Base::size_type;
+        using difference_type = typename Base::difference_type;
+        using hasher = typename Base::hasher;
+        using key_equal = typename Base::key_equal;
+        using allocator_type = typename Base::allocator_type;
+        using reference = typename Base::reference;
+        using const_reference = typename Base::const_reference;
+        using pointer = typename Base::pointer;
+        using const_pointer = typename Base::const_pointer;
+        using iterator = typename Base::iterator;
+        using const_iterator = typename Base::const_iterator;
+
+        using Base::Base;
+
+        using Base::operator=;
+
+        using Base::get_allocator;
+
+        using Base::begin;
+
+        using Base::end;
+
+        using Base::cbegin;
+
+        using Base::cend;
+
+        using Base::empty;
+
+        using Base::size;
+
+        using Base::clear;
+
+        using Base::at;
+
+        using Base::operator[];
+
+        using Base::insert;
+
+        using Base::emplace;
+
+        using Base::emplace_hint;
+
+        using Base::try_emplace;
+
+        using Base::erase;
+
+        using Base::extract;
+
+        using Base::merge;
+
+        using Base::count;
+
+        using Base::find;
+
+        using Base::contains;
+
+        using Base::bucket_count;
+
+        using Base::load_factor;
+
+        using Base::max_load_factor;
+
+        using Base::rehash;
+
+        using Base::reserve;
+
+        using Base::hash_function;
+
+        using Base::key_eq;
+
+        using Base::operator==;
     };
 } // namespace zinc
 

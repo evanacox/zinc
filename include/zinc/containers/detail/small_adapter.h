@@ -16,14 +16,36 @@
 //                                                                           //
 //======---------------------------------------------------------------======//
 
-#ifndef ZINC_DATA_DATA
-#define ZINC_DATA_DATA
+#ifndef ZINC_CONTAINERS_SMALL
+#define ZINC_CONTAINERS_SMALL
 
-#include "zinc/data/detail/small_adapter.h"
-#include "zinc/data/double_ended_vec.h"
-#include "zinc/data/hash_map.h"
-#include "zinc/data/hash_set.h"
-#include "zinc/data/ring_deque.h"
-#include "zinc/data/rope.h"
+#include "zinc/types/aliases.h"
+#include "zinc/types/functors.h"
+#include <functional>
+#include <memory>
+#include <type_traits>
+#include <utility>
+
+namespace zinc::detail
+{
+    struct SmallAdapterPlaceholder
+    {};
+
+    /// Adapts containers to be able to use an inline "small buffer"
+    template <typename Container, std::size_t N> class SmallAdapter : public Container
+    {
+    public:
+        SmallAdapter()
+            : Container(SmallAdapterPlaceholder{}, buffer_, N)
+        {}
+
+        /// Checks if the container being adapted is actually using the
+        /// inline buffer, or if it offloaded to the free store/allocator
+        [[nodiscard]] bool using_small() const noexcept { return Container::raw_storage() == buffer_; }
+
+    protected:
+        AlignedStorageFor<ValueT<Container>> buffer_[N];
+    };
+} // namespace zinc::detail
 
 #endif

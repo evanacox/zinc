@@ -16,8 +16,8 @@
 //                                                                           //
 //======---------------------------------------------------------------======//
 
-#ifndef ZINC_DATA_DETAIL_SLOT_TRAITS
-#define ZINC_DATA_DETAIL_SLOT_TRAITS
+#ifndef ZINC_CONTAINERS_DETAIL_SLOT_TRAITS
+#define ZINC_CONTAINERS_DETAIL_SLOT_TRAITS
 
 #include "zinc/types/allocators.h"
 #include <concepts>

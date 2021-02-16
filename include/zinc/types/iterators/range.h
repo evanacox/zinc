@@ -70,7 +70,7 @@ namespace zinc
                 return *this;
             }
 
-            std::size_t count;
+            T count;
         };
     } // namespace detail
 

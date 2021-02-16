@@ -41,7 +41,7 @@ namespace zinc
     concept Stringlike = Charlike<ValueT<T>>&& std::convertible_to<T, std::basic_string_view<ValueT<T>>>;
 
     /// Checks if a Traits type is a valid drop-in for `std::char_traits` (or even is `char_traits`)
-    /// for type `CharT`. Used in a few types that work with character/string data
+    /// for type `CharT`. Used in a few types that work with character/string containers
     template <typename Traits, typename CharT>
     concept CharTraitsCompatible =
         (std::same_as<Traits, std::char_traits<CharT>>)

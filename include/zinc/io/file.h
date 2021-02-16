@@ -167,11 +167,11 @@ namespace zinc
         ~BasicFile() = default;
 
         /// Assigns the `BasicFile` to a new file, properly closing/clearing any
-        /// old data it contains
+        /// old containers it contains
         BasicFile& operator=(const BasicFile&) = default;
 
         /// Assigns the `BasicFile` to a new file, properly closing/clearing any
-        /// old data it contains and emptying the other file
+        /// old containers it contains and emptying the other file
         BasicFile& operator=(BasicFile&&) noexcept = default;
 
         /// Opens a file after the construction of a file. This is **not** how the type
@@ -314,7 +314,7 @@ namespace zinc
 
         /// Forces a re-read of the file to update the internal file cache
         ///
-        /// Use this as a last resort if you're having issues with data being
+        /// Use this as a last resort if you're having issues with containers being
         /// written by another source and `BasicFile` not knowing, but come on.
         /// Is there really not another way of going about this?
         void notify_changed()
